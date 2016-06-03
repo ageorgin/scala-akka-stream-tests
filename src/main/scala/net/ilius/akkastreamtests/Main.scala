@@ -9,10 +9,9 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import com.typesafe.config.ConfigFactory
 import net.ilius.akkastreamtests.entities.PhotoTableDef
-import net.ilius.akkastreamtests.flows.{XZImgFlow, PhotoFlow, TestFlow}
-import net.ilius.akkastreamtests.messages.{PhotoXzimg, PhotoBinary, PhotoAlbum, Message1}
-import net.ilius.akkastreamtests.sinks.TestSink
-import net.ilius.akkastreamtests.sources.{PhotoAlbumSource, TestSource}
+import net.ilius.akkastreamtests.flows.{XZImgFlow, PhotoFlow}
+import net.ilius.akkastreamtests.messages.{PhotoXzimg, PhotoBinary, PhotoAlbum}
+import net.ilius.akkastreamtests.sources.{PhotoAlbumSource}
 import slick.backend.DatabasePublisher
 
 
