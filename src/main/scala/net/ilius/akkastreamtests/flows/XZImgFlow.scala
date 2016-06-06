@@ -38,10 +38,10 @@ object XZImgFlow {
     stream.toArray
   }
 
-  def buildFaceDetectionFlow(urlXzimgServer: String, system: ActorSystem, materializer: ActorMaterializer): Flow[PhotoBinary, PhotoXzimg, NotUsed] = {
+  def buildFaceDetectionFlow(urlXzimgServer: String, system: ActorSystem, materializer: ActorMaterializer, parallelism: Int): Flow[PhotoBinary, PhotoXzimg, NotUsed] = {
     implicit val mat = materializer
 
-    Flow[PhotoBinary].mapAsyncUnordered(parallelism = 10) {
+    Flow[PhotoBinary].mapAsyncUnordered(parallelism = parallelism) {
       photo =>
         val result = for {
           entity <- createEntity(photo)

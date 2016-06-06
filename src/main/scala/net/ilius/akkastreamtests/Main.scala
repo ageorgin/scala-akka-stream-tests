@@ -59,7 +59,7 @@ object Main extends App {
     val flowPhoto = PhotoFlow.buildFlow(dbPhoto, config)
 
     // flow detection visage
-    val flowDetectFace = XZImgFlow.buildFaceDetectionFlow(config.getString("xzimgUrl"), system, materializer)
+    val flowDetectFace = XZImgFlow.buildFaceDetectionFlow(config.getString("xzimgUrl"), system, materializer, config.getInt("parallelism"))
 
     // Sink de debug
     /*val sink = Sink.foreach[Future[PhotoBinary]](
@@ -85,7 +85,7 @@ object Main extends App {
       is.reset()
     }
 
-    val stream = source.via(flowPhoto).via(flowDetectFace).async.to(sink);
+    val stream = source.via(flowPhoto).via(flowDetectFace).to(sink);
     stream.run()
   }
 }

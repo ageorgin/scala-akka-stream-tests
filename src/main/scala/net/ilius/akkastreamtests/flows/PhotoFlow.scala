@@ -44,7 +44,7 @@ object PhotoFlow {
     * @return
     */
   def buildFlow(db: DatabaseDef, config: Config): Flow[PhotoAlbum, PhotoBinary, NotUsed] = {
-    Flow[PhotoAlbum].mapAsyncUnordered(parallelism = 10) {
+    Flow[PhotoAlbum].mapAsyncUnordered(parallelism = config.getInt("parallelism")) {
       photo =>
         findPhotoBinary(db, config, photo.aboId, photo.phoId)
     }
