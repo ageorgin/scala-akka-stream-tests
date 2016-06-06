@@ -24,7 +24,7 @@ object PhotoAlbumSource {
   def buildSource(db: DatabaseDef): Source[PhotoAlbum, NotUsed] = {
     val photoAlbumTable: TableQuery[PhotoAlbumTableDef] = TableQuery[PhotoAlbumTableDef]
     val q = for (e <- photoAlbumTable) yield (e.aboId, e.phoId)
-    val p1: DatabasePublisher[(String, String)] = db.stream(q.result.withStatementParameters(statementInit = enableStream))
+    val p1: DatabasePublisher[(String, String)] = db.stream(q.result.withStatementParameters(statementInit = enableStream).withStatementParameters(fetchSize = 10))
     val p2: DatabasePublisher[PhotoAlbum] = p1.mapResult { data =>
       PhotoAlbum(data._1, data._2)
     }
@@ -34,7 +34,7 @@ object PhotoAlbumSource {
   def buildSource2(db: DatabaseDef): Source[(String, String), NotUsed] = {
     val photoAlbumTable: TableQuery[PhotoAlbumTableDef] = TableQuery[PhotoAlbumTableDef]
     val q = for (e <- photoAlbumTable) yield (e.aboId, e.phoId)
-    val p1: DatabasePublisher[(String, String)] = db.stream(q.result.withStatementParameters(statementInit = enableStream))
+    val p1: DatabasePublisher[(String, String)] = db.stream(q.result.withStatementParameters(statementInit = enableStream).withStatementParameters(fetchSize = 10))
     Source.fromPublisher(p1)
   }
 }

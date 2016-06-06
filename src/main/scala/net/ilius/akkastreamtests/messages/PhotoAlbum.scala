@@ -23,3 +23,12 @@ case class PhotoXzimg (
                         phoId: String,
                         json: String
                       )
+
+case class PhotoWithCoordinate (
+                               aboId: String,
+                               phoId: String,
+                               thumbX: String,
+                               thumbY: String,
+                               thumbWidth: String,
+                               thumbHeight: String
+                               )

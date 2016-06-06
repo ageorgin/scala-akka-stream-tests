@@ -5,6 +5,10 @@ import java.util.concurrent.ExecutorService
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.marshalling.Marshal
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import com.typesafe.config.ConfigFactory
@@ -41,41 +45,21 @@ object Main extends App {
     stream.run()
     */
 
-
-
     // Exemple avec source base de données
-    val db = Database.forConfig("mysqlCnx")
+    val dbSource = Database.forConfig("mysqlSource")
+    val dbPhoto = Database.forConfig("mysqlPhoto")
     val config = ConfigFactory.load().getConfig("app")
 
-//    val source: Source[(String, String), NotUsed] = PhotoAlbumSource.buildSource2(db)
-//
-//    val flow: Flow[(String, String), PhotoAlbum, NotUsed] = Flow[(String, String)].mapAsyncUnordered(10) {
-//      element =>
-//        println(element._1 + " " + element._2)
-//        Future.successful {
-//          if (element._1 == "400155246") {
-//            Thread.sleep(10000)
-//          }
-//          PhotoAlbum(element._1, element._2)
-//        }
-//    }
-//
-//    val sink = Sink.foreach[PhotoAlbum](
-//      p =>
-//        println(p.aboId)
-//    )
-//
-//    val stream = source.via(flow).async.to(sink)
-//    stream.run()
-//
+    println("config = " + config.getString("xzimgUrl") )
+
     // La source
-    val source: Source[PhotoAlbum, NotUsed] = PhotoAlbumSource.buildSource(db)
+    val source: Source[PhotoAlbum, NotUsed] = PhotoAlbumSource.buildSource(dbSource)
 
     // flow recuperation photo
-    val flowPhoto = PhotoFlow.buildFlow(db, config)
+    val flowPhoto = PhotoFlow.buildFlow(dbPhoto, config)
 
     // flow detection visage
-    val flowDetectFace = XZImgFlow.buildFaceDetectionFlow()
+    val flowDetectFace = XZImgFlow.buildFaceDetectionFlow(config.getString("xzimgUrl"), system, materializer)
 
     // Sink de debug
     /*val sink = Sink.foreach[Future[PhotoBinary]](
@@ -90,7 +74,7 @@ object Main extends App {
 
     val sink = Sink.foreach[PhotoXzimg] {
       detectResult =>
-        println(detectResult.json)
+        println(detectResult.aboId + " " + detectResult.phoId + " " + detectResult.json)
     }
 
     def writeToFile(filename: String, is: InputStream) = {
@@ -103,24 +87,5 @@ object Main extends App {
 
     val stream = source.via(flowPhoto).via(flowDetectFace).async.to(sink);
     stream.run()
-
-    /*
-    // Les flow
-    /*val flow: Flow[Message1, Message1, NotUsed] = TestFlow.buildFlow1
-    val flow2: Flow[Message1, Message1, NotUsed] = TestFlow.buildFlow2
-
-    // Le Sink
-    val sink = TestSink.buildSink
-
-    val stream = source.via(flow).via(flow2).to(sink)*/
-
-    val sink = Sink.foreach[PhotoAlbum](
-      pa => println(pa.aboId + " " + pa.phoId)
-    )
-
-    val stream = source.to(sink);
-
-    stream.run()
-    */
   }
 }

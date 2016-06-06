@@ -1,6 +1,6 @@
 name := "scala-akka-stream-tests"
 
-version := "1.0"
+version := "0.1"
 
 scalaVersion := "2.11.8"
 
@@ -16,5 +16,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick" % "3.1.1",
   "org.slf4j" % "slf4j-nop" % "1.6.4",
   "mysql" % "mysql-connector-java" % "5.1.37",
-  "org.scalaj" %% "scalaj-http" % "1.1.4"
+  "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion
 )

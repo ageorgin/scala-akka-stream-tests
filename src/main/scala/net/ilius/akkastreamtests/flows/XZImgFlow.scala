@@ -3,34 +3,34 @@ package net.ilius.akkastreamtests.flows
 import java.io.InputStream
 
 import akka.NotUsed
-import akka.stream.scaladsl.Flow
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.marshalling.Marshal
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow}
 import net.ilius.akkastreamtests.messages.{PhotoXzimg, PhotoBinary}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scalaj.http.{MultiPart, HttpResponse, Http}
-import scala.concurrent.duration._
 
 /**
   * Created by ageorgin on 01/06/16.
   */
 object XZImgFlow {
-  private def detectFace(photo: PhotoBinary): Future[PhotoXzimg] = {
-    Future.successful {
-      println("call to detect face " + photo.aboId)
-      val response: HttpResponse[String] = Http("http://192.168.56.146:8080/reverse")
-        .postMulti(MultiPart("fullImage", "fullImage.jpg", "image/jpeg", convertToByteArray(photo.photo.getBinaryStream)),
-          MultiPart("thumbImage", "thumbImage.jpg", "image/jpeg", convertToByteArray(photo.thumb.getBinaryStream())))
-        .timeout(10000, 10000)
-        .asString
+  private def createEntity(photoBinary: PhotoBinary): Future[RequestEntity] = {
+    val multipart = Multipart.FormData(
+    parts =
+    Multipart.FormData.BodyPart("fullImage", HttpEntity(MediaTypes.`image/jpeg`, convertToByteArray(photoBinary.photo.getBinaryStream)), Map("filename" -> "fullImage.jpg")),
+    Multipart.FormData.BodyPart("thumbImage", HttpEntity(MediaTypes.`image/jpeg`, convertToByteArray(photoBinary.thumb.getBinaryStream)), Map("filename" -> "thumbImage.jpg"))
+    )
 
-      response.is2xx match {
-        case true => {
-          println("XZImg answered")
-          PhotoXzimg(photo.aboId, photo.phoId, response.body)
-        }
-        case _ => throw new RuntimeException("XZImg error")
-      }
-    }
+    Marshal(multipart).to[RequestEntity]
+  }
+
+  private def createRequest(urlXzimgServer: String, entity: RequestEntity, system:ActorSystem, materializer: ActorMaterializer): Future[HttpResponse] = {
+    println("Call XZImg reverse API")
+    Http(system).singleRequest(HttpRequest(method = HttpMethods.POST, uri = urlXzimgServer, entity = entity))(materializer)
   }
 
   private def convertToByteArray(is: InputStream): Array[Byte] = {
@@ -38,10 +38,23 @@ object XZImgFlow {
     stream.toArray
   }
 
-  def buildFaceDetectionFlow(): Flow[PhotoBinary, PhotoXzimg, NotUsed] = {
+  def buildFaceDetectionFlow(urlXzimgServer: String, system: ActorSystem, materializer: ActorMaterializer): Flow[PhotoBinary, PhotoXzimg, NotUsed] = {
+    implicit val mat = materializer
+
     Flow[PhotoBinary].mapAsyncUnordered(parallelism = 10) {
       photo =>
-        detectFace(photo)
+        val result = for {
+          entity <- createEntity(photo)
+          futureResponse <- createRequest(urlXzimgServer, entity, system, materializer)
+          response <- Unmarshal(futureResponse.entity).to[String]
+        } yield response
+
+        result.map(
+          response =>
+            PhotoXzimg(photo.aboId, photo.phoId, response)
+        )
     }
   }
+
+
 }
