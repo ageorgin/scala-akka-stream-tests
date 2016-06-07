@@ -10,8 +10,11 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow}
-import net.ilius.akkastreamtests.messages.{PhotoXzimg, PhotoBinary}
+import net.ilius.akkastreamtests.messages.{PhotoWithCoordinate, PhotoXzimg, PhotoBinary}
+import net.ilius.akkastreamtests.xzimg.XZimgResponse
 import scala.concurrent.{Future}
+import spray.json._
+import net.ilius.akkastreamtests.xzimg.XZImgResponseJsonProtocol._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -38,6 +41,21 @@ object XZImgFlow {
     stream.toArray
   }
 
+  private def decodeXzimgJson(photoXzimg: PhotoXzimg): Future[PhotoWithCoordinate] = {
+    val xzimgResponse = photoXzimg.json.parseJson.convertTo[XZimgResponse]
+
+    Future.successful {
+      PhotoWithCoordinate(
+        photoXzimg.aboId,
+        photoXzimg.phoId,
+        xzimgResponse.location.x.toString,
+        xzimgResponse.location.y.toString,
+        xzimgResponse.location.width.toString,
+        xzimgResponse.location.height.toString
+      )
+    }
+  }
+
   def buildFaceDetectionFlow(urlXzimgServer: String, system: ActorSystem, materializer: ActorMaterializer, parallelism: Int): Flow[PhotoBinary, PhotoXzimg, NotUsed] = {
     implicit val mat = materializer
 
@@ -56,5 +74,11 @@ object XZImgFlow {
     }
   }
 
+  def buildXzimgJsonDecoderFlow(parallelism: Int): Flow[PhotoXzimg, PhotoWithCoordinate, NotUsed] = {
+    Flow[PhotoXzimg].mapAsyncUnordered(parallelism = parallelism) {
+      photo =>
+        decodeXzimgJson(photo)
+    }
+  }
 
 }

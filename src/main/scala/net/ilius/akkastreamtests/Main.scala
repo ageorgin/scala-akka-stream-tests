@@ -12,14 +12,18 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import com.typesafe.config.ConfigFactory
-import net.ilius.akkastreamtests.entities.PhotoTableDef
+import net.ilius.akkastreamtests.entities.{PhotoTableDef}
 import net.ilius.akkastreamtests.flows.{XZImgFlow, PhotoFlow}
-import net.ilius.akkastreamtests.messages.{PhotoXzimg, PhotoBinary, PhotoAlbum}
+import net.ilius.akkastreamtests.messages.{PhotoWithCoordinate, PhotoXzimg, PhotoBinary, PhotoAlbum}
 import net.ilius.akkastreamtests.sources.{PhotoAlbumSource}
+import net.ilius.akkastreamtests.xzimg.XZimgResponse
+import net.ilius.akkastreamtests.xzimg.XZImgResponseJsonProtocol._
 import slick.backend.DatabasePublisher
 
 
 import slick.driver.MySQLDriver.api._
+import spray.json._
+import DefaultJsonProtocol._
 import scala.concurrent
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
@@ -61,6 +65,9 @@ object Main extends App {
     // flow detection visage
     val flowDetectFace = XZImgFlow.buildFaceDetectionFlow(config.getString("xzimgUrl"), system, materializer, config.getInt("parallelism"))
 
+    // flow décodage JSON
+    val flowJsonDecoder = XZImgFlow.buildXzimgJsonDecoderFlow(config.getInt("parallelism"))
+
     // Sink de debug
     /*val sink = Sink.foreach[Future[PhotoBinary]](
       photoBinary => {
@@ -72,9 +79,9 @@ object Main extends App {
       }
     )*/
 
-    val sink = Sink.foreach[PhotoXzimg] {
+    val sink = Sink.foreach[PhotoWithCoordinate] {
       detectResult =>
-        println(detectResult.aboId + " " + detectResult.phoId + " " + detectResult.json)
+        println(detectResult)
     }
 
     def writeToFile(filename: String, is: InputStream) = {
@@ -85,7 +92,7 @@ object Main extends App {
       is.reset()
     }
 
-    val stream = source.via(flowPhoto).via(flowDetectFace).to(sink);
+    val stream = source.via(flowPhoto).via(flowDetectFace).via(flowJsonDecoder).to(sink);
     stream.run()
   }
 }

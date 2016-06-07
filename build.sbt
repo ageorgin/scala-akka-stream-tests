@@ -8,7 +8,8 @@ val akkaVersion = "2.4.6"
 
 resolvers ++= Seq(
   "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-  "Apache repo" at "https://repository.apache.org/content/repositories/releases"
+  "Apache repo" at "https://repository.apache.org/content/repositories/releases",
+  "Spray repo" at "http://repo.spray.io/"
 )
 
 libraryDependencies ++= Seq(
@@ -17,5 +18,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-nop" % "1.6.4",
   "mysql" % "mysql-connector-java" % "5.1.37",
   "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion
+  "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
+  "io.spray" %%  "spray-json" % "1.3.2"
 )
