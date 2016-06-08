@@ -15,6 +15,7 @@ import com.typesafe.config.ConfigFactory
 import net.ilius.akkastreamtests.entities.{PhotoTableDef}
 import net.ilius.akkastreamtests.flows.{XZImgFlow, PhotoFlow}
 import net.ilius.akkastreamtests.messages.{PhotoWithCoordinate, PhotoXzimg, PhotoBinary, PhotoAlbum}
+import net.ilius.akkastreamtests.sinks.{PhotoAlbumSink}
 import net.ilius.akkastreamtests.sources.{PhotoAlbumSource}
 import net.ilius.akkastreamtests.xzimg.XZimgResponse
 import net.ilius.akkastreamtests.xzimg.XZImgResponseJsonProtocol._
@@ -79,10 +80,7 @@ object Main extends App {
       }
     )*/
 
-    val sink = Sink.foreach[PhotoWithCoordinate] {
-      detectResult =>
-        println(detectResult)
-    }
+    val sink = PhotoAlbumSink.buildUpdatePhotoSink(dbSource)
 
     def writeToFile(filename: String, is: InputStream) = {
       val file:File = new File("/home/ageorgin/_dev/tmp/" + filename + ".jpg")

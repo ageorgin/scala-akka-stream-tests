@@ -44,15 +44,21 @@ object XZImgFlow {
   private def decodeXzimgJson(photoXzimg: PhotoXzimg): Future[PhotoWithCoordinate] = {
     val xzimgResponse = photoXzimg.json.parseJson.convertTo[XZimgResponse]
 
-    Future.successful {
-      PhotoWithCoordinate(
-        photoXzimg.aboId,
-        photoXzimg.phoId,
-        xzimgResponse.location.x.toString,
-        xzimgResponse.location.y.toString,
-        xzimgResponse.location.width.toString,
-        xzimgResponse.location.height.toString
-      )
+    xzimgResponse.confidence match {
+      case 1 =>
+        Future.successful {
+          PhotoWithCoordinate(
+            photoXzimg.aboId,
+            photoXzimg.phoId,
+            xzimgResponse.location.x.toString,
+            xzimgResponse.location.y.toString,
+            xzimgResponse.location.width.toString,
+            xzimgResponse.location.height.toString
+          )
+        }
+      case _ =>
+        println("CONFIDENCE --> " + xzimgResponse)
+        throw new RuntimeException("confidence <> 1 in xzimg json response")
     }
   }
 
