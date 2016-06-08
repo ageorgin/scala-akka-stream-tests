@@ -18,13 +18,20 @@ object PhotoAlbumSink {
 
     val updateAction = q.update(photo.thumbX.toInt, photo.thumbY.toInt, photo.thumbWidth.toInt, photo.thumbHeight.toInt)
     db.run(updateAction)
-    println("PhotoAlbum update for aboId=" + photo.aboId + " and phoId=" + photo.phoId)
+    println("PhotoAlbum updated for aboId=" + photo.aboId + " and phoId=" + photo.phoId)
+  }
+
+  private def faceDetected(photo: PhotoWithCoordinate): Boolean = {
+    photo.thumbX != null && photo.thumbY != null && photo.thumbWidth != null && photo.thumbHeight != null
   }
 
   def buildUpdatePhotoSink(db: DatabaseDef) = {
     Sink.foreach[PhotoWithCoordinate] {
       photo =>
-        updatePhotoSource(db, photo)
+        faceDetected(photo) match {
+          case true => updatePhotoSource(db, photo)
+          case false => println("PhotoAlbum not updated for aboId=" + photo.aboId + " and phoId=" + photo.phoId)
+        }
     }
   }
 }

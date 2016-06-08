@@ -57,8 +57,16 @@ object XZImgFlow {
           )
         }
       case _ =>
-        println("CONFIDENCE --> " + xzimgResponse)
-        throw new RuntimeException("confidence <> 1 in xzimg json response")
+        Future.successful {
+          PhotoWithCoordinate(
+            photoXzimg.aboId,
+            photoXzimg.phoId,
+            null,
+            null,
+            null,
+            null
+          )
+        }
     }
   }
 
