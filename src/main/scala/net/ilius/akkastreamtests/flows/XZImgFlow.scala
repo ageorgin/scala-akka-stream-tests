@@ -1,6 +1,7 @@
 package net.ilius.akkastreamtests.flows
 
 import java.io.InputStream
+import java.sql.Blob
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -16,6 +17,7 @@ import scala.concurrent.{Future}
 import spray.json._
 import net.ilius.akkastreamtests.xzimg.XZImgResponseJsonProtocol._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by ageorgin on 01/06/16.
@@ -41,40 +43,37 @@ object XZImgFlow {
     stream.toArray
   }
 
-  private def decodeXzimgJson(photoXzimg: PhotoXzimg): Future[PhotoWithCoordinate] = {
+  private def decodeXzimgJson(photoXzimg: PhotoXzimg): Future[Try[PhotoWithCoordinate]] = {
+    println("Decoding JSON for " + photoXzimg.phoId)
     val xzimgResponse = photoXzimg.json.parseJson.convertTo[XZimgResponse]
 
     xzimgResponse.confidence match {
       case 1 =>
         Future.successful {
-          PhotoWithCoordinate(
+          println("Decoding JSON OK for " + photoXzimg.phoId)
+          Success(PhotoWithCoordinate(
             photoXzimg.aboId,
             photoXzimg.phoId,
             xzimgResponse.location.x.toString,
             xzimgResponse.location.y.toString,
             xzimgResponse.location.width.toString,
             xzimgResponse.location.height.toString
-          )
+          ))
         }
       case _ =>
         Future.successful {
-          PhotoWithCoordinate(
-            photoXzimg.aboId,
-            photoXzimg.phoId,
-            null,
-            null,
-            null,
-            null
-          )
+          println("Decoding JSON KO for " + photoXzimg.phoId)
+          Failure(new RuntimeException("erreur XZimg"))
         }
     }
   }
 
-  def buildFaceDetectionFlow(urlXzimgServer: String, system: ActorSystem, materializer: ActorMaterializer, parallelism: Int): Flow[PhotoBinary, PhotoXzimg, NotUsed] = {
+  def buildFaceDetectionFlow(urlXzimgServer: String, system: ActorSystem, materializer: ActorMaterializer, parallelism: Int): Flow[Try[PhotoBinary], Try[PhotoXzimg], NotUsed] = {
     implicit val mat = materializer
 
-    Flow[PhotoBinary].mapAsyncUnordered(parallelism = parallelism) {
-      photo =>
+    Flow[Try[PhotoBinary]].mapAsyncUnordered(parallelism = parallelism) {
+      case Success(photo) =>
+        println("Face detection for " + photo.phoId)
         val result = for {
           entity <- createEntity(photo)
           futureResponse <- createRequest(urlXzimgServer, entity, system, materializer)
@@ -83,15 +82,29 @@ object XZImgFlow {
 
         result.map(
           response =>
-            PhotoXzimg(photo.aboId, photo.phoId, response)
-        )
+            Success(PhotoXzimg(photo.aboId, photo.phoId, response))
+        ) recover { case e =>
+          println("Erreur XZImg reverse API")
+          Failure(e)
+        }
+
+      case Failure(f) =>
+        Future.successful {
+          println("No face detection")
+          Failure(f)
+        }
     }
   }
 
-  def buildXzimgJsonDecoderFlow(parallelism: Int): Flow[PhotoXzimg, PhotoWithCoordinate, NotUsed] = {
-    Flow[PhotoXzimg].mapAsyncUnordered(parallelism = parallelism) {
-      photo =>
+  def buildXzimgJsonDecoderFlow(parallelism: Int): Flow[Try[PhotoXzimg], Try[PhotoWithCoordinate], NotUsed] = {
+    Flow[Try[PhotoXzimg]].mapAsyncUnordered(parallelism = parallelism) {
+      case Success(photo: PhotoXzimg) =>
         decodeXzimgJson(photo)
+      case Failure(f) =>
+        Future.successful {
+          println("No JSON decoding")
+          Failure(f)
+        }
     }
   }
 

@@ -1,6 +1,6 @@
 name := "scala-akka-stream-tests"
 
-version := "0.4"
+version := "0.6"
 
 scalaVersion := "2.11.8"
 

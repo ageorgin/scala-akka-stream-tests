@@ -9,7 +9,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializerSettings, ActorMaterializer}
 import akka.stream.scaladsl._
 import com.typesafe.config.ConfigFactory
 import net.ilius.akkastreamtests.entities.{PhotoTableDef}
@@ -37,7 +37,9 @@ object Main extends App {
   override def main(args: Array[String]) {
 
     implicit val system = ActorSystem("test")
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer = ActorMaterializer(
+      ActorMaterializerSettings(system).withInputBuffer(128, 128)
+    )
 
     /*
     // Exemple très simple
@@ -90,7 +92,8 @@ object Main extends App {
       is.reset()
     }
 
-    val stream = source.via(flowPhoto).via(flowDetectFace).via(flowJsonDecoder).to(sink);
-    stream.run()
+      val stream = source.via(flowPhoto).via(flowDetectFace).via(flowJsonDecoder).to(sink);
+      stream.run()
+
   }
 }

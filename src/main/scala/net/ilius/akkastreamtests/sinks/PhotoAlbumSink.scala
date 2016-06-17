@@ -6,6 +6,8 @@ import net.ilius.akkastreamtests.messages.PhotoWithCoordinate
 import slick.driver.MySQLDriver.api._
 import slick.driver.MySQLDriver.backend.DatabaseDef
 
+import scala.util.{Failure, Success, Try}
+
 /**
   * Created by ageorgin on 07/06/16.
   */
@@ -26,12 +28,14 @@ object PhotoAlbumSink {
   }
 
   def buildUpdatePhotoSink(db: DatabaseDef) = {
-    Sink.foreach[PhotoWithCoordinate] {
-      photo =>
+    Sink.foreach[Try[PhotoWithCoordinate]] {
+      case Success(photo: PhotoWithCoordinate) =>
         faceDetected(photo) match {
           case true => updatePhotoSource(db, photo)
           case false => println("PhotoAlbum not updated for aboId=" + photo.aboId + " and phoId=" + photo.phoId)
         }
+      case Failure(f) =>
+        println("PhotoAlbum not updated")
     }
   }
 }
