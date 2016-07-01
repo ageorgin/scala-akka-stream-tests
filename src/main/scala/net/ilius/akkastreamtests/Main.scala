@@ -29,6 +29,7 @@ import scala.concurrent
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by ageorgin on 20/05/16.
@@ -53,17 +54,15 @@ object Main extends App {
     */
 
     // Exemple avec source base de données
-    val dbSource = Database.forConfig("mysqlSource")
-    val dbPhoto = Database.forConfig("mysqlPhoto")
     val config = ConfigFactory.load().getConfig("app")
 
     println("config = " + config.getString("xzimgUrl") )
 
     // La source
-    val source: Source[PhotoAlbum, NotUsed] = PhotoAlbumSource.buildSource(dbSource)
+    val source: Source[PhotoAlbum, NotUsed] = PhotoAlbumSource.buildSource()
 
     // flow recuperation photo
-    val flowPhoto = PhotoFlow.buildFlow(dbPhoto, config)
+    val flowPhoto = PhotoFlow.buildFlow(config)
 
     // flow detection visage
     val flowDetectFace = XZImgFlow.buildFaceDetectionFlow(config.getString("xzimgUrl"), system, materializer, config.getInt("parallelism"))
@@ -71,18 +70,8 @@ object Main extends App {
     // flow décodage JSON
     val flowJsonDecoder = XZImgFlow.buildXzimgJsonDecoderFlow(config.getInt("parallelism"))
 
-    // Sink de debug
-    /*val sink = Sink.foreach[Future[PhotoBinary]](
-      photoBinary => {
-        val result = Await.result(photoBinary, 10 seconds)
-        println(result.phoId)
-
-        // pour écrire le fichier sur disque
-        //writeToFile(result.phoId.asInstanceOf[String], result.photo.getBinaryStream)
-      }
-    )*/
-
-    val sink = PhotoAlbumSink.buildUpdatePhotoSink(dbSource)
+    // Sink updgrade db
+    val sink = PhotoAlbumSink.buildUpdatePhotoSink()
 
     def writeToFile(filename: String, is: InputStream) = {
       val file:File = new File("/home/ageorgin/_dev/tmp/" + filename + ".jpg")
@@ -92,8 +81,7 @@ object Main extends App {
       is.reset()
     }
 
-      val stream = source.via(flowPhoto).via(flowDetectFace).via(flowJsonDecoder).to(sink);
-      stream.run()
-
+    val stream = source.via(flowPhoto).via(flowDetectFace).via(flowJsonDecoder).to(sink);
+    stream.run()
   }
 }

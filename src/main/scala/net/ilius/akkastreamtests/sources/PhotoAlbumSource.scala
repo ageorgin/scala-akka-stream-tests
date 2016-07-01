@@ -21,7 +21,8 @@ object PhotoAlbumSource {
     }
   }
 
-  def buildSource(db: DatabaseDef): Source[PhotoAlbum, NotUsed] = {
+  def buildSource(): Source[PhotoAlbum, NotUsed] = {
+    val db = Database.forConfig("mysqlSource")
     val photoAlbumTable: TableQuery[PhotoAlbumTableDef] = TableQuery[PhotoAlbumTableDef]
     val q = for (e <- photoAlbumTable) yield (e.aboId, e.phoId)
     val p1: DatabasePublisher[(String, String)] = db.stream(q.result.withStatementParameters(statementInit = enableStream).withStatementParameters(fetchSize = 100))

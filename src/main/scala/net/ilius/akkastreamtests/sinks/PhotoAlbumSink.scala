@@ -12,14 +12,16 @@ import scala.util.{Failure, Success, Try}
   * Created by ageorgin on 07/06/16.
   */
 object PhotoAlbumSink {
-  private def updatePhotoSource(db: DatabaseDef, photo: PhotoWithCoordinate) = {
+  private def updatePhotoSource(photo: PhotoWithCoordinate) = {
+    val db = Database.forConfig("mysqlSource")
     val photoAlbumTable: TableQuery[PhotoAlbumTableDef] = TableQuery[PhotoAlbumTableDef]
     val q = for {
       p <- photoAlbumTable if p.aboId === photo.aboId && p.phoId === photo.phoId
     } yield (p.thumbX, p.thumbY, p.thumbWidth, p.thumbHeight)
 
     val updateAction = q.update(photo.thumbX.toInt, photo.thumbY.toInt, photo.thumbWidth.toInt, photo.thumbHeight.toInt)
-    db.run(updateAction)
+    try db.run(updateAction)
+    finally db.close()
     println("PhotoAlbum updated for aboId=" + photo.aboId + " and phoId=" + photo.phoId)
   }
 
@@ -27,11 +29,11 @@ object PhotoAlbumSink {
     photo.thumbX != null && photo.thumbY != null && photo.thumbWidth != null && photo.thumbHeight != null
   }
 
-  def buildUpdatePhotoSink(db: DatabaseDef) = {
+  def buildUpdatePhotoSink() = {
     Sink.foreach[Try[PhotoWithCoordinate]] {
       case Success(photo: PhotoWithCoordinate) =>
         faceDetected(photo) match {
-          case true => updatePhotoSource(db, photo)
+          case true => updatePhotoSource(photo)
           case false => println("PhotoAlbum not updated for aboId=" + photo.aboId + " and phoId=" + photo.phoId)
         }
       case Failure(f) =>

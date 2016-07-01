@@ -19,13 +19,13 @@ object PhotoFlow {
   /**
     * Use Object mapping to find row in PhotoTableDef according to aboId and phoId
     *
-    * @param db
     * @param aboId
     * @param phoId
     * @return Future[String]
     */
-  private def findPhotoBinary(db: DatabaseDef,config: Config, aboId: String, phoId: String): Future[Try[PhotoBinary]] = {
+  private def findPhotoBinary(config: Config, aboId: String, phoId: String): Future[Try[PhotoBinary]] = {
 
+    val db = Database.forConfig("mysqlPhoto")
     val tableName: String = config.getBoolean("shardingActive") match {
       case true => "PHOTO".concat(phoId.substring(0, 2))
       case false => "PHOTO"
@@ -37,22 +37,23 @@ object PhotoFlow {
     result.map {
       s =>
         println("lecture en base OK " + phoId)
+        db.close()
         Success(PhotoBinary(s._1, s._2, s._3, s._4))
     } recover { case e =>
       println("lecture en base KO " + phoId)
+      db.close()
       Failure(e)
     }
   }
 
   /**
     * Build flow to process binary photo from database
-    * @param db
     * @return
     */
-  def buildFlow(db: DatabaseDef, config: Config): Flow[PhotoAlbum, Try[PhotoBinary], NotUsed] = {
+  def buildFlow(config: Config): Flow[PhotoAlbum, Try[PhotoBinary], NotUsed] = {
     Flow[PhotoAlbum].mapAsyncUnordered(parallelism = config.getInt("parallelism")) {
       photo =>
-        findPhotoBinary(db, config, photo.aboId, photo.phoId)
+        findPhotoBinary(config, photo.aboId, photo.phoId)
     }
   }
 }

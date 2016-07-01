@@ -73,19 +73,27 @@ object XZImgFlow {
 
     Flow[Try[PhotoBinary]].mapAsyncUnordered(parallelism = parallelism) {
       case Success(photo) =>
-        println("Face detection for " + photo.phoId)
-        val result = for {
-          entity <- createEntity(photo)
-          futureResponse <- createRequest(urlXzimgServer, entity, system, materializer)
-          response <- Unmarshal(futureResponse.entity).to[String]
-        } yield response
+        try {
+          println("Face detection for " + photo.phoId)
+          val result = for {
+            entity <- createEntity(photo)
+            futureResponse <- createRequest(urlXzimgServer, entity, system, materializer)
+            response <- Unmarshal(futureResponse.entity).to[String]
+          } yield response
 
-        result.map(
-          response =>
-            Success(PhotoXzimg(photo.aboId, photo.phoId, response))
-        ) recover { case e =>
-          println("Erreur XZImg reverse API")
-          Failure(e)
+          result.map(
+            response =>
+              Success(PhotoXzimg(photo.aboId, photo.phoId, response))
+          ) recover { case e =>
+            println("Recover erreur XZImg reverse API")
+            Failure(e)
+          }
+        } catch {
+          case ex =>
+            println("Exception XZImg reverse API")
+            Future.successful(
+              Failure(ex)
+            )
         }
 
       case Failure(f) =>
